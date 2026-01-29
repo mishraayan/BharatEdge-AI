@@ -15,13 +15,16 @@ BharatEdge AI is an open-source tool built to bring high-performance Document Q&
 
 ## 🚀 Getting Started
 
-### Prerequisites
-- Windows 10/11 (64-bit)
-- 8GB RAM (Minimum)
-- Python 3.10+
-- Node.js 18+ (For UI development)
+### 📥 Download & Install (For Users)
+If you are not a developer and just want to use the app:
+1.  Go to the **[Releases](https://github.com/mishraayan/BharatEdge-AI/releases)** page.
+2.  Download the latest installer (`.msi` for traditional installation or `.exe` for portable/standalone).
+3.  Run the installer and follow the prompts.
+4.  *Note: On your first run, the app will download the necessary AI models (~2GB). Ensure you have a stable connection for the initial setup.*
 
-### Developer Setup
+---
+
+### 💻 Developer Setup
 
 1.  **Clone & Enter**
     ```bash
