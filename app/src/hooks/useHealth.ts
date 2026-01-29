@@ -23,10 +23,17 @@ export function useHealth() {
                 }
             } catch (err) {
                 console.error("Health check failed", err);
-                // Keep status as loading or error if it takes too long
-                if (status !== 'ready') setStatus('error');
+                // Keep status as loading during the first few seconds of startup
+                // Only set error if it persists
             }
         };
+
+        // ...
+
+        // Set a timeout to declare absolute failure only after 30 seconds
+        const timeoutId = setTimeout(() => {
+            setStatus(s => s === 'ready' || s === 'setup' ? s : 'error');
+        }, 30000); // Give it plenty of time for 8GB RAM users
 
         // Initial check
         checkHealth();
@@ -34,7 +41,10 @@ export function useHealth() {
         // Poll every 2 seconds
         intervalId = setInterval(checkHealth, 2000);
 
-        return () => clearInterval(intervalId);
+        return () => {
+            clearInterval(intervalId);
+            clearTimeout(timeoutId);
+        };
     }, []);
 
     return status;

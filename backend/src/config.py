@@ -4,16 +4,13 @@ import sys
 
 # Base Directories
 if getattr(sys, 'frozen', False):
-    # If running as a frozen binary (PyInstaller)
-    BASE_DIR = os.path.dirname(sys.executable)
+    # If running as an installed app, use User Home to avoid Program Files permission errors
+    # This creates a folder like C:\Users\Name\BharatEdge-AI-Data
+    HOME_DIR = os.path.expanduser("~")
+    BACKEND_DIR = os.path.join(HOME_DIR, ".bharatedge")
 else:
     # If running normally (source)
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# For data/base/models, we want them in the same folder as the exe
-if getattr(sys, 'frozen', False):
-    BACKEND_DIR = BASE_DIR
-else:
     BACKEND_DIR = os.path.dirname(BASE_DIR)
 
 

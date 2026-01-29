@@ -132,4 +132,5 @@ async def chat_endpoint(request: ChatRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("src.main:app", host="0.0.0.0", port=8000, reload=True)
+    # Use the app object directly instead of a string for sidecar reliability
+    uvicorn.run(app, host="127.0.0.1", port=8000)
