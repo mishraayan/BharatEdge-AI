@@ -105,23 +105,27 @@ async def chat_endpoint(request: ChatRequest):
     logger.info(f"Query: {request.message} | Filters: {request.sources} | Chunks: {len(citations)}")
 
     def response_generator():
-        # 1. Yield Citations
-        citation_data = [{
-            "source": c.source, 
-            "page": c.page, 
-            "text": c.text[:50] + "..." # Snippet
-        } for c in citations]
-        
-        yield json.dumps({"type": "citation", "data": citation_data}) + "\n"
-        
-        # 2. Yield Tokens
-        for piece in rag_engine.query(request.message, request.history, sources=request.sources):
-            if isinstance(piece, dict) and piece.get("type") == "meta":
-                 yield json.dumps(piece) + "\n"
-            else:
-                 yield json.dumps({"type": "token", "data": piece}) + "\n"
+        try:
+            # 1. Yield Citations
+            citation_data = [{
+                "source": c.source, 
+                "page": c.page, 
+                "text": c.text[:50] + "..." # Snippet
+            } for c in citations]
             
-        yield json.dumps({"type": "done"}) + "\n"
+            yield json.dumps({"type": "citation", "data": citation_data}) + "\n"
+            
+            # 2. Yield Tokens
+            for piece in rag_engine.query(request.message, request.history, sources=request.sources):
+                if isinstance(piece, dict) and piece.get("type") == "meta":
+                     yield json.dumps(piece) + "\n"
+                else:
+                     yield json.dumps({"type": "token", "data": piece}) + "\n"
+                
+            yield json.dumps({"type": "done"}) + "\n"
+        except Exception as e:
+            logger.error(f"Chat streaming error: {e}")
+            yield json.dumps({"type": "error", "message": str(e)}) + "\n"
 
     return StreamingResponse(response_generator(), media_type="application/x-ndjson")
 

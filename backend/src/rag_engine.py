@@ -48,6 +48,7 @@ class RAGEngine:
         Constructs the strict RAG prompt.
         """
         # Format Context with Citations
+        context_str = ""
         if not context_chunks:
             if sources:
                 context_str = f"WARNING: No text content found for the selected files: {', '.join(sources)}. This might happen if the files are scanned and OCR failed, or if they are empty."
