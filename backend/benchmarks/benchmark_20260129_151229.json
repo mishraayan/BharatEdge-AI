@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-01-29T15:11:39.372254",
+  "system_info": {
+    "cpu_cores": 8,
+    "total_ram_gb": 15.71
+  },
+  "metrics": {
+    "startup": {
+      "time_seconds": 7.1693,
+      "ram_increase_mb": 1949.49,
+      "final_ram_mb": 1968.22
+    },
+    "retrieval": {
+      "avg_latency_seconds": 0.0386,
+      "min_latency": 0.016,
+      "max_latency": 0.0836,
+      "queries_run": 3
+    },
+    "inference": {
+      "tokens_per_sec": 12.13,
+      "total_tokens": 513,
+      "time_to_first_token": 0.6038,
+      "peak_ram_mb": 4305.52
+    }
+  }
+}

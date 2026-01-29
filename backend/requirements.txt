@@ -1,0 +1,14 @@
+fastapi==0.109.0
+uvicorn==0.27.0
+python-multipart==0.0.9
+pydantic==2.6.0
+
+chromadb==0.4.22
+sentence-transformers==2.3.1
+PyMuPDF==1.23.8  # for PDF parsing
+python-docx==1.1.0
+langchain-text-splitters==0.0.1
+psutil==5.9.8
+numpy<2.0.0
+Pillow>=10.0.0
+easyocr>=1.7.1

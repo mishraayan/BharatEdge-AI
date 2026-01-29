@@ -1,0 +1,72 @@
+# System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# --------------------------
+# Frontend (React + Tauri)
+# --------------------------
+app/node_modules/
+app/dist/
+app/build/
+
+# Tauri Build Artifacts
+app/src-tauri/target/
+app/src-tauri/gen/
+
+# --------------------------
+# Backend (Python)
+# --------------------------
+backend/venv/
+backend/.venv/
+backend/__pycache__/
+backend/build/
+backend/dist/
+*.pyc
+*.pyo
+*.pyd
+
+# Pytest
+.pytest_cache/
+
+# --------------------------
+# AI Data & Models (DO NOT COMMIT)
+# --------------------------
+# Exclude Vector DB persistence
+backend/database/
+backend/chroma_db/
+
+# Exclude User Uploaded Documents
+backend/data/
+backend/uploads/
+
+# Exclude Large AI Models (Download via scripts instead)
+backend/models/
+*.gguf
+*.bin
+*.pt
+*.safetensors
+
+# --------------------------
+# Installers / Bundles
+# --------------------------
+*.msi
+*.exe
+!Run-BharatEdge.bat
