@@ -23,7 +23,7 @@ MODELS_DIR = os.path.join(BACKEND_DIR, "models")
 
 # Hardware Configuration (8GB RAM Target)
 # n_ctx: Context window (limited to saving RAM on low-spec units)
-MAX_CONTEXT_WINDOW = 2048 
+MAX_CONTEXT_WINDOW = 4096 
 
 # n_threads Detection
 import multiprocessing

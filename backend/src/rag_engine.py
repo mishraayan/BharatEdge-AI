@@ -155,6 +155,16 @@ Relevant Context:
 
     def get_citations(self, message: str, sources: List[str] = None) -> List[DocumentChunk]:
         """
-        Public expose for citations.
+        Public expose for citations. Deduplicated by (source, page).
         """
-        return self.retrieve_context(message, sources=sources)
+        raw_chunks = self.retrieve_context(message, sources=sources)
+        
+        seen = set()
+        deduped = []
+        for c in raw_chunks:
+            key = (c.source, c.page)
+            if key not in seen:
+                seen.add(key)
+                deduped.append(c)
+        
+        return deduped

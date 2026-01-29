@@ -94,10 +94,19 @@ export function useChat() {
 
         } catch (err: any) {
             if (err.name !== 'AbortError') {
-                setMessages((prev) => [
-                    ...prev,
-                    { role: 'assistant', content: 'Connection failed. Please retry.' }
-                ]);
+                setMessages((prev) => {
+                    const newMsgs = [...prev];
+                    const lastIdx = newMsgs.length - 1;
+                    if (lastIdx >= 0 && newMsgs[lastIdx].role === 'assistant') {
+                        newMsgs[lastIdx] = {
+                            ...newMsgs[lastIdx],
+                            content: 'Connection failed. The AI engine might be reloading or busy. Please retry.'
+                        };
+                    } else {
+                        newMsgs.push({ role: 'assistant', content: 'Connection failed. Please retry.' });
+                    }
+                    return newMsgs;
+                });
             }
         } finally {
             setIsStreaming(false);
