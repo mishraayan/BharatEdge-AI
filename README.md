@@ -1,4 +1,4 @@
-# BharatEdge AI 🇮🇳
+# <img src="app/src-tauri/icons/128x128.png" width="32" height="32" vertical-align="middle"> BharatEdge AI 🇮🇳
 
 **Offline-First, Privacy-Centric RAG for Every Laptop.**
 
