@@ -6,21 +6,21 @@ BharatEdge AI follows a **Sidecar Architecture** pattern to combine a lightweigh
 
 ```mermaid
 graph TD
-    User[End User] -->|Interacts| UI[Tauri GUI (React)]
+    User["End User"] -->|Interacts| UI["Tauri GUI (React)"]
     
     subgraph "Local Device (Offline)"
-        UI -- HTTP REST --> Backend[Python Backend (FastAPI)]
+        UI -- HTTP REST --> Backend["Python Backend (FastAPI)"]
         
-        Backend --> Orchestrator[RAG Orchestrator]
+        Backend --> Orchestrator["RAG Orchestrator"]
         
-        Orchestrator -->|1. Parse & Chunk| Ingest[Ingestion Engine]
-        Ingest -->|PDF/Txt| Docs[User Files]
+        Orchestrator -->|"1. Parse & Chunk"| Ingest["Ingestion Engine"]
+        Ingest -->|PDF/Txt| Docs["User Files"]
         
-        Orchestrator -->|2. Vector Search| VDB[(ChromaDB)]
-        VDB <-->|Embed| EmbedModel[all-MiniLM-L6-v2]
+        Orchestrator -->|"2. Vector Search"| VDB[("ChromaDB")]
+        VDB <-->|Embed| EmbedModel["all-MiniLM-L6-v2"]
         
-        Orchestrator -->|3. Inference| LLM[LLM Engine (llama.cpp)]
-        LLM -->|Load| ModelFile[GGUF Model (Phi-3 / Qwen)]
+        Orchestrator -->|"3. Inference"| LLM["LLM Engine (llama.cpp)"]
+        LLM -->|Load| ModelFile["GGUF Model (Phi-3 / Qwen)"]
     end
 ```
 
