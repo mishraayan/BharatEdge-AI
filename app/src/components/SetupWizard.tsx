@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Download, CheckCircle, Loader2 } from 'lucide-react';
+import { endpoints } from '../api/client';
 
 export default function SetupWizard({ onComplete }: { onComplete: () => void }) {
     const [step, setStep] = useState<'intro' | 'downloading' | 'complete'>('intro');
@@ -10,24 +11,38 @@ export default function SetupWizard({ onComplete }: { onComplete: () => void }) 
         setStep('downloading');
         setStatusText('Starting download of AI models (approx 2.5GB)...');
 
-        // In a real implementation, we would call a backend endpoint that streams download progress.
-        // For now, we'll simulate it to demonstrate the UI flow.
-        let p = 0;
-        const interval = setInterval(() => {
-            p += Math.random() * 5;
-            if (p >= 100) {
-                p = 100;
-                clearInterval(interval);
-                setStatusText('Download complete! Optimizing for your CPU...');
-                setTimeout(() => {
-                    setStep('complete');
-                }, 1500);
-            }
-            setProgress(p);
-            if (p < 30) setStatusText(`Fetching LLM Brain... ${Math.round(p)}%`);
-            else if (p < 70) setStatusText(`Downloading English & Bengali Dictionary... ${Math.round(p)}%`);
-            else if (p < 95) setStatusText(`Finalizing RAG indexing tools... ${Math.round(p)}%`);
-        }, 800);
+        try {
+            // 1. Trigger the download
+            const initRes = await fetch(`${endpoints.health.replace('/health', '')}/setup/init`, { method: 'POST' });
+            if (!initRes.ok) throw new Error("Failed to start download");
+
+            // 2. Poll for progress
+            const pollInterval = setInterval(async () => {
+                try {
+                    const statusRes = await fetch(`${endpoints.health.replace('/health', '')}/setup/status`);
+                    if (statusRes.ok) {
+                        const data = await statusRes.json();
+                        setProgress(data.progress);
+                        setStatusText(data.message || 'Downloading...');
+
+                        if (data.status === 'complete') {
+                            clearInterval(pollInterval);
+                            setStep('complete');
+                        } else if (data.status === 'error') {
+                            clearInterval(pollInterval);
+                            setStep('intro');
+                            alert("Download failed: " + data.message);
+                        }
+                    }
+                } catch (err) {
+                    console.error("Polling failed", err);
+                }
+            }, 2000);
+        } catch (err) {
+            console.error("Setup failed", err);
+            setStep('intro');
+            alert("Could not connect to backend to start download.");
+        }
     };
 
     return (

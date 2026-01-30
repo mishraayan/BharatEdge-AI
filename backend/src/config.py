@@ -17,6 +17,8 @@ else:
 DATA_DIR = os.path.join(BACKEND_DIR, "data")
 DB_DIR = os.path.join(BACKEND_DIR, "database")
 MODELS_DIR = os.path.join(BACKEND_DIR, "models")
+LOG_DIR = os.path.join(BACKEND_DIR, "logs")
+LOG_FILE = os.path.join(LOG_DIR, "backend.log")
 
 # Hardware Configuration (8GB RAM Target)
 # n_ctx: Context window (limited to saving RAM on low-spec units)
@@ -57,6 +59,7 @@ EMBEDDING_CACHE_DIR = os.path.join(MODELS_DIR, "embeddings")
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(DB_DIR, exist_ok=True)
 os.makedirs(MODELS_DIR, exist_ok=True)
+os.makedirs(LOG_DIR, exist_ok=True)
 # We Create the embedding folder too so user sees it
 os.makedirs(EMBEDDING_CACHE_DIR, exist_ok=True)
 

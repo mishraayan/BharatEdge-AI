@@ -1,17 +1,25 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import shutil
 import os
+import sys
 import logging
 
 from src.models import ChatRequest, ChatResponse, IngestResponse
 from src.rag_engine import RAGEngine
 from src.ingestion import DocumentIngestor
-from src.config import DATA_DIR
+from src.config import DATA_DIR, LOG_FILE
 
 # Initialize Logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(LOG_FILE),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 logger = logging.getLogger(__name__)
 
 # Initialize App
@@ -26,22 +34,125 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global Engines (Lazy loading could be better, but this is simple)
-rag_engine = RAGEngine()
-ingestor = DocumentIngestor()
+# Global Engines (Lazy loading to prevent startup crashes)
+_rag_engine = None
+_ingestor = None
+download_progress = {"status": "idle", "progress": 0, "message": ""}
+
+def get_rag_engine():
+    global _rag_engine
+    if _rag_engine is None:
+        try:
+            _rag_engine = RAGEngine()
+        except Exception as e:
+            logger.error(f"Failed to initialize RAGEngine: {e}")
+    return _rag_engine
+
+def get_ingestor():
+    global _ingestor
+    if _ingestor is None:
+        try:
+            _ingestor = DocumentIngestor()
+        except Exception as e:
+            logger.error(f"Failed to initialize DocumentIngestor: {e}")
+    return _ingestor
+
+@app.get("/setup/status")
+def get_setup_status():
+    return download_progress
+
+@app.post("/setup/init")
+async def init_setup(background_tasks: BackgroundTasks):
+    if download_progress["status"] == "downloading":
+        return {"message": "Download already in progress"}
+    
+    background_tasks.add_task(run_setup_tasks)
+    return {"message": "Setup started"}
+
+def run_setup_tasks():
+    global download_progress
+    from src.config import LLM_MODEL_PATH, LLM_MODEL_FILENAME, MODELS_DIR
+    import requests
+    
+    try:
+        download_progress["status"] = "downloading"
+        
+        # 1. Download LLM
+        # 1. Download LLM
+        min_size = 1.5 * 1024 * 1024 * 1024 # 1.5 GB
+        
+        if os.path.exists(LLM_MODEL_PATH):
+            file_size = os.path.getsize(LLM_MODEL_PATH)
+            if file_size < min_size:
+                logger.warning(f"Model file corrupt (size {file_size} < {min_size}). Deleting...")
+                try:
+                    os.remove(LLM_MODEL_PATH)
+                except Exception as e:
+                    logger.error(f"Failed to delete corrupt model: {e}")
+        
+        if not os.path.exists(LLM_MODEL_PATH):
+            url = "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf"
+            logger.info(f"Downloading LLM from {url}...")
+            response = requests.get(url, stream=True)
+            total_size = int(response.headers.get('content-length', 0))
+            download_progress["message"] = "Downloading LLM Brain (2.5GB)..."
+            
+            with open(LLM_MODEL_PATH, 'wb') as f:
+                downloaded = 0
+                for data in response.iter_content(chunk_size=1024*1024): # 1MB chunks
+                    downloaded += len(data)
+                    f.write(data)
+                    if total_size > 0:
+                        download_progress["progress"] = int((downloaded / total_size) * 80) # 80% for LLM
+        
+        # 2. Embedding Model
+        download_progress["message"] = "Downloading Embedding Model..."
+        from src.config import EMBEDDING_CACHE_DIR, EMBEDDING_MODEL_NAME
+        
+        # Check if model exists (heuristic: check for config.json)
+        if not os.path.exists(os.path.join(EMBEDDING_MODEL_NAME, "config.json")):
+             logger.info(f"Downloading embedding model to {EMBEDDING_MODEL_NAME}...")
+             from sentence_transformers import SentenceTransformer
+             
+             # Download and save to ensuring persistence in the correct path
+             model = SentenceTransformer('all-MiniLM-L6-v2', cache_folder=EMBEDDING_CACHE_DIR)
+             model.save(EMBEDDING_MODEL_NAME)
+
+        download_progress["message"] = "Initializing Embedding Engine..."
+        download_progress["progress"] = 90
+        get_rag_engine() # This will trigger model loads
+        
+        download_progress["status"] = "complete"
+        download_progress["progress"] = 100
+        download_progress["message"] = "Ready to Go!"
+        
+    except Exception as e:
+        logger.error(f"Setup failed: {e}")
+        download_progress["status"] = "error"
+        download_progress["message"] = str(e)
 
 @app.get("/health")
 def health_check():
-    from src.config import LLM_MODEL_PATH
-    model_exists = os.path.exists(LLM_MODEL_PATH)
+    from src.config import LLM_MODEL_PATH, EMBEDDING_MODEL_NAME
+    
+    min_size = 1.5 * 1024 * 1024 * 1024 # 1.5 GB
+    llm_exists = os.path.exists(LLM_MODEL_PATH) and os.path.getsize(LLM_MODEL_PATH) > min_size
+    embedding_exists = os.path.exists(os.path.join(EMBEDDING_MODEL_NAME, "config.json"))
+    
+    engine = get_rag_engine()
     return {
         "status": "ok", 
-        "llm_loaded": rag_engine.llm_engine.llm is not None,
-        "model_exists": model_exists
+        "llm_loaded": engine.llm_engine.llm is not None if engine and engine.llm_engine else False,
+        "model_exists": llm_exists and embedding_exists,
+        "engine_ready": engine is not None
     }
 
 @app.post("/documents/upload", response_model=IngestResponse)
 async def upload_document(file: UploadFile = File(...)):
+    ingestor = get_ingestor()
+    if not ingestor:
+        raise HTTPException(status_code=503, detail="Ingestion engine not ready. Check model files.")
+    
     try:
         # 1. Save File
         filename = file.filename
@@ -53,7 +164,9 @@ async def upload_document(file: UploadFile = File(...)):
         
         # 3. Index (Vector DB)
         if chunks:
-            rag_engine.vector_db.add_documents(chunks, metadatas)
+            engine = get_rag_engine()
+            if engine:
+                engine.vector_db.add_documents(chunks, metadatas)
         
         return IngestResponse(
             filename=filename,
@@ -82,7 +195,9 @@ async def delete_document_endpoint(filename: str):
             os.remove(file_path)
             
         # 2. Delete from Vector DB
-        rag_engine.vector_db.delete_document(filename)
+        engine = get_rag_engine()
+        if engine:
+            engine.vector_db.delete_document(filename)
         
         return {"status": "deleted", "filename": filename}
     except Exception as e:
@@ -95,13 +210,13 @@ import json
 async def chat_endpoint(request: ChatRequest):
     """
     Streaming chat endpoint providing JSON Events.
-    Format:
-    - {"type": "citation", "data": [...]}
-    - {"type": "token", "data": "text"}
-    - {"type": "done"}
     """
+    engine = get_rag_engine()
+    if not engine:
+        raise HTTPException(status_code=503, detail="AI Engine not ready. Check model files.")
+
     # Get citations first
-    citations = rag_engine.get_citations(request.message, sources=request.sources)
+    citations = engine.get_citations(request.message, sources=request.sources)
     logger.info(f"Query: {request.message} | Filters: {request.sources} | Chunks: {len(citations)}")
 
     def response_generator():
@@ -116,7 +231,7 @@ async def chat_endpoint(request: ChatRequest):
             yield json.dumps({"type": "citation", "data": citation_data}) + "\n"
             
             # 2. Yield Tokens
-            for piece in rag_engine.query(request.message, request.history, sources=request.sources):
+            for piece in engine.query(request.message, request.history, sources=request.sources):
                 if isinstance(piece, dict) and piece.get("type") == "meta":
                      yield json.dumps(piece) + "\n"
                 else:

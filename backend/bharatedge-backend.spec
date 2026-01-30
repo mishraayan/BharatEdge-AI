@@ -1,17 +1,19 @@
-# -*- mode: python ; coding: utf-8 -*-
-import os
-from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 block_cipher = None
 
 # Collect data files for dependencies if needed (e.g. fast-api, uvicorn)
-datas = []
-# ChromaDB and other libs might need data files, but usually they are fine
-# SentenceTransformers might need some if we weren't using absolute local paths
+datas = collect_data_files('llama_cpp')
+datas += collect_data_files('sentence_transformers')
+datas += collect_data_files('chromadb')
+
+# Manually add the chromadb source folder to be sure
+import chromadb
+datas += [(os.path.dirname(chromadb.__file__), 'chromadb')]
 
 a = Analysis(
     ['src/main.py'],
-    pathex=[],
+    pathex=['.'],
     binaries=[],
     datas=datas,
     hiddenimports=[
@@ -31,8 +33,19 @@ a = Analysis(
         'src.llm_engine',
         'src.vector_db',
         'src.models',
-        'src.config'
-    ],
+        'src.config',
+        'chromadb.api.segment',
+        'chromadb.telemetry.product.posthog',
+        'chromadb.db.impl.sqlite',
+        'chromadb.migrations',
+        'chromadb.db.mixins.embeddings_queue',
+        'chromadb.db.mixins.sysdb',
+        'chromadb.ingest.impl.fastapi',
+        'chromadb.segment.impl.vector.local_persistent_hnsw',
+        'chromadb.segment.impl.metadata.sqlite',
+        'chromadb.base',
+        'chromadb.api.fastapi',
+    ] + collect_submodules('chromadb') + collect_submodules('llama_cpp'),
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
